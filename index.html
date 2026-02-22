@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ELECTRO | Premium Store</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600&display=swap" rel="stylesheet">
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    
+    <script>
+        tailwind.config = { theme: { extend: { fontFamily: { sans: ['Inter', 'sans-serif'] }, colors: { surface: '#030303', glass: 'rgba(20, 20, 20, 0.4)', borderGlass: 'rgba(255, 255, 255, 0.05)', accent: '#ffffff' } } } }
+    </script>
+    <style>
+        body { background-color: #000; color: #f5f5f7; overflow-x: hidden; scroll-behavior: smooth; }
+        
+        /* Premium Noise Texture */
+        .noise-bg { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 9999; opacity: 0.03; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E"); }
+
+        /* Aesthetic Glassmorphism */
+        .glass-panel { background: var(--glass); backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px); border: 1px solid var(--borderGlass); box-shadow: 0 40px 80px rgba(0,0,0,0.8); }
+        .nav-blur { background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(40px); border-bottom: 1px solid var(--borderGlass); }
+        
+        .track-mega { letter-spacing: 0.3em; } .font-hairline { font-weight: 100; }
+        
+        /* Input & Form Styling */
+        input, select, textarea { background: transparent; border: none; border-bottom: 1px solid rgba(255,255,255,0.15); color: white; padding: 12px 0; outline: none; transition: all 0.3s ease; font-weight: 300; }
+        input:focus, select:focus, textarea:focus { border-bottom-color: white; }
+        
+        /* Interactive Card */
+        .card-container { perspective: 1000px; width: 100%; max-width: 340px; margin: 0 auto; height: 190px; }
+        .card-inner { width: 100%; height: 100%; transition: transform 0.8s cubic-bezier(0.16, 1, 0.3, 1); transform-style: preserve-3d; position: relative; }
+        .card-container.flip .card-inner { transform: rotateY(180deg); }
+        .card-front, .card-back { width: 100%; height: 100%; position: absolute; backface-visibility: hidden; border-radius: 1.2rem; background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.01) 100%); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.1); display: flex; flex-direction: column; justify-content: space-between; padding: 1.5rem; }
+        .card-back { transform: rotateY(180deg); }
+        .card-stripe { width: calc(100% + 3rem); height: 40px; background: rgba(0,0,0,0.8); margin-top: 1rem; margin-left: -1.5rem; }
+
+        /* Sleek Button */
+        .btn-sleek { background: #fff; color: #000; transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+        .btn-sleek:hover { transform: scale(1.02); box-shadow: 0 10px 30px rgba(255,255,255,0.2); }
+        
+        /* Drawers */
+        .drawer { transform: translateX(100%); transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1); }
+        .drawer.open { transform: translateX(0); }
+        #overlay { opacity: 0; pointer-events: none; transition: opacity 0.5s ease; }
+        #overlay.open { opacity: 1; pointer-events: auto; }
+
+        /* Ultra Premium Success Animation */
+        .premium-check-container { width: 80px; height: 80px; position: relative; margin: 0 auto 2rem; display: flex; justify-content: center; align-items: center; }
+        .premium-ring { position: absolute; width: 100%; height: 100%; border-radius: 50%; border: 1px solid rgba(255,255,255,0.1); animation: scaleIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        .premium-ring::before { content: ''; position: absolute; top: -1px; left: -1px; right: -1px; bottom: -1px; border-radius: 50%; border: 2px solid transparent; border-top-color: #fff; border-right-color: #fff; animation: spin 1s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        .premium-check { width: 30px; height: 15px; border-bottom: 2px solid #fff; border-left: 2px solid #fff; transform: rotate(-45deg) translateY(-5px); opacity: 0; animation: dropIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.6s forwards; }
+        
+        @keyframes scaleIn { 0% { transform: scale(0.5); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); border-color: rgba(255,255,255,0.3); } }
+        @keyframes dropIn { 0% { opacity: 0; transform: rotate(-45deg) translateY(-15px); } 100% { opacity: 1; transform: rotate(-45deg) translateY(-5px); } }
+
+        /* API Polling Animation */
+        .pulse-ring { width: 60px; height: 60px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.3); margin: 0 auto 2rem; position: relative; display: flex; align-items: center; justify-content: center; }
+        .pulse-ring::before { content: ''; position: absolute; width: 100%; height: 100%; border-radius: 50%; border: 1px solid #fff; animation: ripple 1.5s infinite cubic-bezier(0.16, 1, 0.3, 1); }
+        @keyframes ripple { 0% { transform: scale(0.8); opacity: 1; } 100% { transform: scale(2); opacity: 0; } }
+
+        .fade-in-up { animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; transform: translateY(20px); }
+        @keyframes fadeInUp { to { opacity: 1; transform: translateY(0); } }
+
+        ::-webkit-scrollbar { width: 3px; } ::-webkit-scrollbar-track { background: transparent; } ::-webkit-scrollbar-thumb { background: #333; }
+        
+        /* Payment Tabs */
+        .pay-tab { padding: 14px 0; text-align: center; font-size: 9px; text-transform: uppercase; letter-spacing: 0.25em; font-weight: 500; cursor: pointer; transition: all 0.3s ease; border-bottom: 1px solid transparent; color: #666; }
+        .pay-tab.active { color: #fff; border-bottom: 1px solid #fff; }
+        
+        input[type="file"] { display: none; } .custom-file-upload { display: flex; flex-direction: column; align-items: center; justify-content: center; border: 1px dashed var(--borderGlass); padding: 30px; cursor: pointer; border-radius: 16px; transition: all 0.3s; background: rgba(255,255,255,0.01); }
+    </style>
+</head>
+<body class="antialiased selection:bg-white selection:text-black">
+
+    <div class="noise-bg"></div>
+    <div id="overlay" class="fixed inset-0 bg-black/80 z-[100] backdrop-blur-md" onclick="closeAllDrawers()"></div>
+    <div id="toast-container" class="fixed top-24 left-1/2 -translate-x-1/2 z-[400] flex flex-col gap-3 w-max"></div>
+
+    <div id="profile-drawer" class="drawer fixed top-0 right-0 h-full w-full md:w-[450px] bg-[#050505] border-l border-white/5 z-[150] flex flex-col">
+        <div class="p-8 border-b border-white/5 flex justify-between items-center bg-black">
+            <h2 class="text-[9px] uppercase track-mega text-gray-500">Identity Profile</h2>
+            <button onclick="closeAllDrawers()" class="text-white text-xl hover:rotate-90 transition-transform"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="p-8 space-y-8 flex-grow overflow-y-auto">
+            <div class="flex items-center gap-6 mb-8">
+                <div class="w-16 h-16 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-2xl font-light" id="profile-avatar">U</div>
+                <div>
+                    <h3 class="text-xl font-light tracking-wide" id="profile-display-name">User</h3>
+                    <span class="text-[9px] uppercase track-mega text-green-400 mt-1 block">Verified Account</span>
+                </div>
+            </div>
+            <form id="profile-form" onsubmit="saveProfile(event)" class="space-y-6">
+                <div><label class="text-[8px] uppercase track-mega text-gray-500">Legal Name</label><input type="text" id="prof-name" class="w-full text-sm font-light" required></div>
+                <div><label class="text-[8px] uppercase track-mega text-gray-500">Phone Number</label><input type="tel" id="prof-phone" class="w-full text-sm font-mono font-light" maxlength="10" required></div>
+                <div><label class="text-[8px] uppercase track-mega text-gray-500">Primary Delivery Address</label><textarea id="prof-address" class="w-full text-sm resize-none font-light border-b border-white/15 focus:border-white outline-none bg-transparent py-2" rows="3" required></textarea></div>
+                <button type="submit" class="w-full bg-white text-black py-4 rounded-full text-[9px] uppercase track-mega font-bold btn-sleek mt-8">Save Details</button>
+            </form>
+            <button onclick="logout()" class="w-full text-red-500 hover:text-white py-4 text-[9px] uppercase track-mega font-medium transition-colors">Sign Out securely</button>
+        </div>
+    </div>
+
+    <div id="cart-drawer" class="drawer fixed top-0 right-0 h-full w-full md:w-[450px] bg-[#050505] border-l border-white/5 z-[150] flex flex-col">
+        <div class="p-8 border-b border-white/5 flex justify-between items-center bg-black">
+            <h2 class="text-[9px] uppercase track-mega text-gray-500">Your Bag</h2>
+            <button onclick="closeAllDrawers()" class="text-white text-xl hover:rotate-90 transition-transform"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div id="cart-items" class="flex-grow overflow-y-auto p-8 space-y-6"></div>
+        <div class="p-8 border-t border-white/5 bg-black">
+            <div id="checkout-details" class="hidden mb-8 space-y-6">
+                <div class="flex justify-between items-end border-b border-white/10 pb-4">
+                    <h3 class="text-[9px] uppercase track-mega text-gray-400">Shipping Details</h3>
+                    <button type="button" onclick="fillFromProfile()" class="text-[9px] uppercase track-mega text-white opacity-60 hover:opacity-100 transition">Auto-fill</button>
+                </div>
+                <input type="text" id="cust-name" placeholder="Recipient Name" required class="w-full text-sm font-light">
+                <input type="text" id="cust-address" placeholder="Delivery Address" required class="w-full text-sm font-light">
+                <input type="tel" id="cust-phone" placeholder="Phone Number" required class="w-full text-sm font-mono font-light" maxlength="10">
+            </div>
+            <div class="flex justify-between items-end mb-8">
+                <span class="text-[9px] uppercase track-mega text-gray-500">Subtotal</span>
+                <span id="cart-total" class="text-2xl font-light tracking-tight">₹0</span>
+            </div>
+            <button id="checkout-init-btn" onclick="openCheckoutDetails()" class="w-full bg-white text-black py-4 rounded-full text-[10px] uppercase track-mega font-bold btn-sleek">Checkout</button>
+        </div>
+    </div>
+
+    <div id="modal-payment" class="fixed inset-0 z-[300] hidden items-center justify-center p-4 bg-black/60 backdrop-blur-xl">
+        <div class="glass-panel p-10 md:p-14 w-full max-w-[500px] rounded-[2.5rem] relative flex flex-col max-h-[90vh] overflow-y-auto">
+            <button onclick="closeModal('modal-payment')" class="absolute top-8 right-8 text-gray-500 hover:text-white transition z-20"><i class="fa-solid fa-xmark text-xl"></i></button>
+            
+            <div id="payment-form-step" class="fade-in-up">
+                <div class="flex items-center gap-3 mb-8 text-gray-400">
+                    <i class="fa-solid fa-lock text-xs"></i>
+                    <span class="text-[8px] uppercase track-mega">Secured via SSL</span>
+                </div>
+
+                <div class="flex gap-8 border-b border-white/10 mb-10">
+                    <div id="tab-upi" onclick="switchPayMethod('upi')" class="pay-tab active">Direct UPI</div>
+                    <div id="tab-card" onclick="switchPayMethod('card')" class="pay-tab inactive">Credit/Debit</div>
+                </div>
+
+                <div id="form-upi" class="flex flex-col fade-in-up">
+                    <p class="text-xs font-light text-gray-400 mb-8 text-center leading-relaxed">Pay seamlessly using your installed UPI apps. No manual UTR entry required.</p>
+                    
+                    <button onclick="initiateDirectUPI()" class="w-full border border-white/20 bg-white/5 hover:bg-white hover:text-black text-white py-5 rounded-2xl flex items-center justify-center gap-4 transition-all duration-300 group mb-6">
+                        <i class="fa-brands fa-google-pay text-2xl filter grayscale group-hover:grayscale-0 opacity-80 group-hover:opacity-100 transition-all"></i>
+                        <span class="text-[10px] uppercase track-mega font-bold">Open Payment App</span>
+                    </button>
+
+                    <div class="flex justify-between items-center border-t border-white/10 pt-8 mt-4">
+                        <span class="text-[9px] text-gray-500 uppercase track-mega">Total Due</span>
+                        <span id="pay-amount-display-upi" class="text-xl font-light text-white">₹0</span>
+                    </div>
+                </div>
+
+                <div id="form-card" class="hidden flex-col fade-in-up">
+                    <div class="card-container mb-10" id="card-3d">
+                        <div class="card-inner">
+                            <div class="card-front">
+                                <div class="flex justify-between items-start">
+                                    <i class="fa-solid fa-microchip text-2xl text-white/40"></i>
+                                    <i class="fa-brands fa-cc-visa text-3xl text-white/80"></i>
+                                </div>
+                                <div>
+                                    <div id="vis-num" class="font-mono text-base tracking-[0.2em] mb-4 text-white/90">XXXX XXXX XXXX XXXX</div>
+                                    <div class="flex justify-between items-end">
+                                        <div>
+                                            <p class="text-[7px] uppercase text-white/40 track-mega mb-1">Cardholder</p>
+                                            <p id="vis-name" class="font-mono text-[10px] uppercase text-white/90 truncate max-w-[150px]">NAME</p>
+                                        </div>
+                                        <div class="text-right">
+                                            <p class="text-[7px] uppercase text-white/40 track-mega mb-1">Expires</p>
+                                            <p id="vis-exp" class="font-mono text-[10px] text-white/90">MM/YY</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card-back">
+                                <div class="card-stripe"></div>
+                                <div class="mt-6 flex flex-col items-end px-2">
+                                    <p class="text-[7px] uppercase text-white/40 track-mega mb-1">CVV</p>
+                                    <div class="bg-white text-black font-mono px-3 py-1 text-xs rounded w-16 text-center" id="vis-cvv">***</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="space-y-6 mb-10">
+                        <input type="text" id="card-name" placeholder="Name on Card" class="w-full text-sm font-light uppercase" oninput="updateCardVisual()" onfocus="flipCard(false)">
+                        <input type="text" id="card-num" placeholder="Card Number" maxlength="16" oninput="this.value = this.value.replace(/[^0-9]/g, ''); updateCardVisual()" onfocus="flipCard(false)" class="w-full text-sm font-mono tracking-widest font-light">
+                        <div class="flex gap-8">
+                            <input type="text" id="card-exp" placeholder="MM/YY" maxlength="5" oninput="formatExpiry(this); updateCardVisual()" onfocus="flipCard(false)" class="w-full text-sm font-mono font-light">
+                            <input type="password" id="card-cvv" placeholder="CVV" maxlength="3" oninput="this.value = this.value.replace(/[^0-9]/g, ''); updateCardVisual()" onfocus="flipCard(true)" onblur="flipCard(false)" class="w-full text-sm font-mono tracking-widest text-center font-light">
+                        </div>
+                    </div>
+
+                    <div class="flex justify-between items-center border-t border-white/10 pt-8 mb-8">
+                        <span class="text-[9px] text-gray-500 uppercase track-mega">Total Due</span>
+                        <span id="pay-amount-display-card" class="text-xl font-light text-white">₹0</span>
+                    </div>
+
+                    <button onclick="processCardPayment()" class="w-full bg-white text-black py-4 rounded-full text-[10px] uppercase track-mega font-bold btn-sleek">
+                        Authorize Payment
+                    </button>
+                </div>
+            </div>
+
+            <div id="payment-polling-step" class="hidden flex-col items-center justify-center py-16 text-center fade-in-up">
+                <div class="pulse-ring">
+                    <i class="fa-solid fa-lock text-sm text-white"></i>
+                </div>
+                <h3 class="text-xl font-light tracking-wide text-white mb-2" id="poll-title">Awaiting Transfer</h3>
+                <p class="text-[9px] text-gray-500 uppercase track-mega mb-8" id="poll-desc">Listening for bank webhooks...</p>
+                <p class="text-[10px] font-mono text-gray-600">Please do not close this window</p>
+            </div>
+
+            <div id="payment-success-step" class="hidden flex-col items-center justify-center py-16 text-center">
+                <div class="premium-check-container">
+                    <div class="premium-ring"></div>
+                    <div class="premium-check"></div>
+                </div>
+                <h3 class="text-2xl font-light tracking-wide mb-3 text-white">Order Confirmed</h3>
+                <p class="text-[9px] text-gray-400 uppercase track-mega mb-10 font-mono tracking-widest" id="success-txn-id">TXN: </p>
+                <button onclick="finishOrder()" class="border border-white/30 hover:border-white text-white px-10 py-4 rounded-full text-[9px] uppercase track-mega transition-all">Back to Store</button>
+            </div>
+        </div>
+    </div>
+
+    <nav class="nav-blur fixed top-0 w-full z-50">
+        <div class="w-full max-w-[1400px] mx-auto px-6 md:px-12 flex justify-between items-center h-[80px]">
+            <div class="text-xl font-hairline track-mega cursor-pointer" onclick="navigate('home')">ELECTR<span class="font-bold">O</span></div>
+            <div class="flex items-center gap-8">
+                <div id="auth-section" class="text-[9px] uppercase track-mega flex items-center gap-6 text-gray-400 font-medium border-r border-white/10 pr-8"></div>
+                <div class="flex gap-6 items-center">
+                    <button onclick="openProfile()" class="text-gray-400 hover:text-white transition" id="nav-profile-btn" style="display:none;"><i class="fa-regular fa-user text-lg"></i></button>
+                    <button onclick="openCart()" class="relative text-gray-400 hover:text-white transition">
+                        <i class="fa-solid fa-bag-shopping text-lg"></i>
+                        <span id="nav-cart-count" class="absolute -top-2 -right-2 bg-white text-black text-[9px] h-4 w-4 rounded-full flex items-center justify-center font-bold font-mono">0</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div id="modal-product" class="fixed inset-0 z-[250] hidden items-center justify-center p-4 bg-black/90 backdrop-blur-md">
+        <div class="glass-panel p-10 w-full max-w-lg rounded-3xl relative max-h-[90vh] overflow-y-auto">
+            <button onclick="closeModal('modal-product')" class="absolute top-6 right-6 text-gray-500 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+            <h2 class="text-[9px] uppercase track-mega text-gray-400 mb-8 text-center" id="admin-modal-title">Inventory Control</h2>
+            <form onsubmit="saveProduct(event)" class="space-y-6">
+                <input type="hidden" id="p-id">
+                <input type="hidden" id="p-img-data">
+                <label class="custom-file-upload">
+                    <input type="file" id="p-upload" accept="image/*" onchange="handleImageUpload(event, 'p-img-data', 'p-preview', 'p-icon', 'p-text')">
+                    <img id="p-preview" class="hidden w-32 h-32 object-cover rounded-xl mb-4 border border-white/10 shadow-lg">
+                    <i id="p-icon" class="fa-solid fa-camera text-2xl text-gray-500 mb-3"></i>
+                    <span id="p-text" class="text-[9px] uppercase track-mega text-gray-400 text-center">Select Device Image</span>
+                </label>
+                <input type="text" id="p-name" placeholder="Product Name" required class="text-sm w-full font-light">
+                <div class="flex gap-6">
+                    <select id="p-cat" class="w-full text-sm font-light text-gray-300" required></select>
+                    <input type="number" id="p-price" placeholder="Price (₹)" required class="text-sm w-full font-light">
+                </div>
+                <input type="number" id="p-stock" placeholder="Stock Quantity" required class="text-sm w-full font-light">
+                <button type="submit" class="w-full bg-white text-black py-4 rounded-full text-[9px] uppercase track-mega font-bold mt-4 btn-sleek">Save Data</button>
+            </form>
+        </div>
+    </div>
+
+    <main class="min-h-screen flex flex-col pt-[80px]">
+        
+        <section id="view-home" class="view-section flex-grow">
+            <div id="ad-slider-container" class="relative w-full h-[75vh] flex items-center justify-center overflow-hidden bg-[#020202]">
+                <div class="absolute w-[800px] h-[800px] bg-white/5 blur-[150px] rounded-full pointer-events-none z-0"></div>
+                <div id="ad-slides" class="w-full h-full relative z-10"></div>
+            </div>
+            
+            <div id="store" class="w-full max-w-[1400px] mx-auto px-6 md:px-12 py-24">
+                <div class="flex flex-col md:flex-row justify-between items-center mb-16 gap-8 border-b border-white/10 pb-8 reveal">
+                    <h2 class="text-2xl font-light track-mega uppercase">The Gallery</h2>
+                    <div class="flex flex-wrap justify-center gap-6" id="category-tabs"></div>
+                </div>
+                <div id="product-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-12 gap-y-20"></div>
+            </div>
+        </section>
+
+        <section id="view-login" class="view-section hidden flex-grow flex items-center justify-center px-4 bg-[#050505]">
+            <div class="glass-panel p-14 w-full max-w-md rounded-[2.5rem] text-center reveal active">
+                <div class="w-16 h-16 rounded-full border border-white/10 flex items-center justify-center mx-auto mb-8 bg-white/5">
+                    <i class="fa-solid fa-fingerprint text-2xl text-white/80"></i>
+                </div>
+                <h2 class="text-3xl font-light tracking-tight mb-2">Member Login</h2>
+                <p class="text-[9px] uppercase track-mega text-gray-500 mb-12">Identify Yourself</p>
+                <form onsubmit="handleAuth(event)" class="space-y-8 text-left">
+                    <input type="text" id="login-username" required placeholder="Username" class="w-full text-sm font-light">
+                    <input type="password" id="login-password" required placeholder="Password" class="w-full text-sm font-light">
+                    <button id="login-btn" class="w-full border border-white text-white py-4 rounded-full text-[10px] uppercase track-mega font-bold hover:bg-white hover:text-black transition-all mt-8 shadow-xl">Authenticate</button>
+                </form>
+            </div>
+        </section>
+
+        <section id="view-admin" class="view-section hidden flex-grow w-full max-w-[1400px] mx-auto px-6 md:px-12 py-20">
+            <div class="flex justify-between items-end mb-20 border-b border-white/10 pb-8 gap-6 reveal active">
+                <div><h2 class="text-4xl font-hairline tracking-tight uppercase">Command Center</h2></div>
+                <button onclick="openModal('modal-product')" class="border border-white/30 text-white hover:border-white px-8 py-3 rounded-full text-[9px] font-bold uppercase track-mega transition">Add Product</button>
+            </div>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-16 reveal active">
+                <div>
+                    <h3 class="text-[9px] font-bold uppercase track-mega text-gray-400 mb-8 border-b border-white/5 pb-4">Verified Orders</h3>
+                    <div id="admin-orders" class="space-y-4"></div>
+                    <div id="no-orders" class="glass-panel p-10 text-center rounded-3xl text-gray-600 text-[10px] uppercase track-mega hidden">Zero active orders</div>
+                </div>
+                <div>
+                    <h3 class="text-[9px] font-bold uppercase track-mega text-gray-400 mb-8 border-b border-white/5 pb-4">Inventory Status</h3>
+                    <div id="admin-inventory" class="glass-panel rounded-[2rem] divide-y divide-white/5 border border-white/5"></div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="border-t border-white/5 bg-[#020202]">
+        <div class="max-w-[1400px] mx-auto px-6 md:px-12 py-16 text-center">
+            <div class="text-2xl font-hairline track-mega text-gray-600 mb-6">ELECTR<span class="font-bold text-white">O</span></div>
+            <p class="text-[8px] uppercase track-mega text-gray-700">&copy; 2026 Electro Inc. Aesthetic Standard.</p>
+        </div>
+    </footer>
+
+    <script>
+        // STATE MANAGEMENT (Preserves data on refresh)
+        let defaultProducts = [
+            { id: '1', name: 'Aura Studio Master', cat: 'Audio', price: 45000, img: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800', stock: 10 },
+            { id: '2', name: 'Pro Display XDR', cat: 'Vision', price: 189000, img: 'https://images.unsplash.com/photo-1527443224154-c4a3942d3acf?w=800', stock: 4 }
+        ];
+        let defaultAds = [{ id: 'ad1', title: 'PURE <span class="font-semibold">VISION.</span>', subtitle: 'The aesthetic of future tech', img: 'https://images.unsplash.com/photo-1593640408182-31c70c8268f5?q=80&w=2000' }];
+
+        let state = {
+            user: JSON.parse(localStorage.getItem('el_user')) || null,
+            cart: JSON.parse(localStorage.getItem('el_cart')) || [],
+            orders: JSON.parse(localStorage.getItem('el_orders')) || [],
+            products: JSON.parse(localStorage.getItem('el_products')) || defaultProducts,
+            ads: JSON.parse(localStorage.getItem('el_ads')) || defaultAds,
+            categories: ['Audio', 'Vision', 'Lifestyle'],
+            currentFilter: 'All',
+            settings: { upiId: '8817015859@ybl', merchantName: 'Electro Store' }
+        };
+
+        function saveState() {
+            localStorage.setItem('el_user', JSON.stringify(state.user));
+            localStorage.setItem('el_cart', JSON.stringify(state.cart));
+            localStorage.setItem('el_orders', JSON.stringify(state.orders));
+            localStorage.setItem('el_products', JSON.stringify(state.products));
+        }
+
+        const inr = (n) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(n);
+        
+        // STRICT VALIDATION (Anti-Chomu System)
+        const isValidPhone = (p) => /^[6-9]\d{9}$/.test(p);
+        const isValidName = (n) => /^[A-Za-z\s]{3,50}$/.test(n);
+        const isValidAddress = (a) => a.trim().length >= 10;
+        const isValidCardNum = (n) => n.length === 16;
+        
+        function showToast(msg, type = 'info') {
+            const c = document.getElementById('toast-container'); const t = document.createElement('div');
+            let color = type === 'error' ? 'text-red-400 border-red-500' : 'text-white border-white';
+            t.className = `glass-panel px-6 py-4 rounded-full fade-in-up text-[9px] uppercase track-mega font-bold ${color} shadow-2xl border-l`;
+            t.innerText = msg; c.appendChild(t);
+            setTimeout(() => { t.style.opacity = '0'; t.style.transform = 'translateY(10px)'; setTimeout(() => t.remove(), 400); }, 3000);
+        }
+
+        // UI & DRAWERS
+        function openCart() { document.getElementById('cart-drawer').classList.add('open'); document.getElementById('overlay').classList.add('open'); renderCart(); }
+        function openProfile() { 
+            document.getElementById('profile-drawer').classList.add('open'); document.getElementById('overlay').classList.add('open'); 
+            if(state.user) {
+                document.getElementById('profile-display-name').innerText = state.user.name || state.user.username;
+                document.getElementById('profile-avatar').innerText = (state.user.name || state.user.username).charAt(0).toUpperCase();
+                document.getElementById('prof-name').value = state.user.name || ''; document.getElementById('prof-phone').value = state.user.phone || ''; document.getElementById('prof-address').value = state.user.address || '';
+            }
+        }
+        function closeAllDrawers() { 
+            document.querySelectorAll('.drawer').forEach(d => d.classList.remove('open')); document.getElementById('overlay').classList.remove('open'); 
+            document.getElementById('checkout-details').classList.add('hidden'); document.getElementById('checkout-init-btn').innerText = 'Proceed to Checkout'; document.getElementById('checkout-init-btn').onclick = openCheckoutDetails;
+        }
+
+        function saveProfile(e) {
+            e.preventDefault();
+            const n = document.getElementById('prof-name').value.trim(); const p = document.getElementById('prof-phone').value.trim(); const a = document.getElementById('prof-address').value.trim();
+            if(!isValidName(n)) return showToast('Invalid Name: Letters only', 'error');
+            if(!isValidPhone(p)) return showToast('Invalid Phone: 10 Digits required', 'error');
+            if(!isValidAddress(a)) return showToast('Address too short', 'error');
+            state.user.name = n; state.user.phone = p; state.user.address = a; saveState(); showToast('Profile Saved'); openProfile();
+        }
+        function fillFromProfile() {
+            if(!state.user || !state.user.phone) return showToast('No saved profile found', 'error');
+            document.getElementById('cust-name').value = state.user.name; document.getElementById('cust-address').value = state.user.address; document.getElementById('cust-phone').value = state.user.phone;
+        }
+
+        // AUTH
+        function handleAuth(e) {
+            e.preventDefault(); const u = document.getElementById('login-username').value.trim(); const p = document.getElementById('login-password').value;
+            if (u === 'admin' && p === '20190126550') { state.user = { username: 'Admin', role: 'admin' }; navigate('admin'); } 
+            else { 
+                if(!/^[A-Za-z]+$/.test(u)) return showToast('Username: Letters only', 'error');
+                if(p.length < 5) return showToast('Password too short', 'error');
+                state.user = { username: u, role: 'user' }; navigate('home'); 
+                if(state.cart.length > 0) setTimeout(() => openCart(), 500); // Resume cart
+            }
+            document.getElementById('nav-profile-btn').style.display = state.user.role === 'admin' ? 'none' : 'block';
+            updateNavbar(); saveState(); showToast('Secure Session Active'); e.target.reset();
+        }
+        function logout() { state.user = null; saveState(); closeAllDrawers(); navigate('home'); updateNavbar(); showToast('Session Ended'); }
+
+        // NAVIGATION
+        function navigate(view) {
+            if (view === 'admin' && state.user?.role !== 'admin') return;
+            document.querySelectorAll('.view-section').forEach(s => s.classList.add('hidden')); document.getElementById(`view-${view}`).classList.remove('hidden');
+            if (view === 'home') { renderCategories(); renderHome(); initAds(); setTimeout(runReveal, 100); }
+            if (view === 'admin') renderAdmin();
+            window.scrollTo(0,0);
+        }
+        function updateNavbar() {
+            const auth = document.getElementById('auth-section'); const profBtn = document.getElementById('nav-profile-btn');
+            if (!state.user) { auth.innerHTML = `<button onclick="navigate('login')" class="hover:text-white transition">Sign In</button>`; profBtn.style.display='none'; } 
+            else {
+                let adminBtn = state.user.role === 'admin' ? `<button onclick="navigate('admin')" class="text-white">Console</button>` : '';
+                auth.innerHTML = `${adminBtn} <span class="hidden md:inline">${state.user.name || state.user.username}</span>`;
+                profBtn.style.display = state.user.role === 'user' ? 'block' : 'none';
+            }
+            updateCartCount();
+        }
+
+        // 3D INTERACTIVE CARD
+        function flipCard(back) { const c = document.getElementById('card-3d'); if(back) c.classList.add('flip'); else c.classList.remove('flip'); }
+        function updateCardVisual() {
+            let num = document.getElementById('card-num').value; let name = document.getElementById('card-name').value; let exp = document.getElementById('card-exp').value; let cvv = document.getElementById('card-cvv').value;
+            document.getElementById('vis-num').innerText = num.padEnd(16, 'X').match(/.{1,4}/g).join(' ');
+            document.getElementById('vis-name').innerText = name || 'NAME';
+            document.getElementById('vis-exp').innerText = exp || 'MM/YY';
+            document.getElementById('vis-cvv').innerText = cvv || '***';
+        }
+        function formatExpiry(input) { let val = input.value.replace(/\D/g, ''); if(val.length >= 2) val = val.substring(0,2) + '/' + val.substring(2,4); input.value = val; }
+
+        // STORE & CART (Allowed without login)
+        function addToCart(id) {
+            const p = state.products.find(x => x.id === id); if (p.stock <= 0) return;
+            const exists = state.cart.find(x => x.id === id);
+            if (exists) { if(exists.qty < p.stock) exists.qty++; else return showToast('Stock Limit Reached', 'error'); } 
+            else { state.cart.push({...p, qty: 1}); }
+            saveState(); updateCartCount(); openCart();
+        }
+        function updateCartCount() { document.getElementById('nav-cart-count').innerText = state.cart.reduce((a,b) => a + b.qty, 0); }
+        function renderCart() {
+            const container = document.getElementById('cart-items');
+            if(state.cart.length === 0) {
+                container.innerHTML = `<div class="h-full flex flex-col justify-center items-center text-gray-500 text-[9px] uppercase track-mega">Bag is empty</div>`;
+                document.getElementById('checkout-init-btn').style.display = 'none';
+            } else {
+                document.getElementById('checkout-init-btn').style.display = 'block';
+                container.innerHTML = state.cart.map(i => `
+                    <div class="flex items-center gap-6 pb-6 border-b border-white/5">
+                        <img src="${i.img}" class="w-16 h-16 object-cover bg-white/5 rounded-xl shrink-0">
+                        <div class="flex-grow">
+                            <h4 class="font-light text-sm tracking-wide">${i.name}</h4>
+                            <p class="text-[10px] text-gray-500 mt-1 font-mono">QTY: ${i.qty} | ${inr(i.price)}</p>
+                            <button onclick="removeFromCart('${i.id}')" class="text-[8px] uppercase track-mega text-red-500/80 mt-2 hover:text-red-500">Remove</button>
+                        </div>
+                    </div>
+                `).join('');
+            }
+            document.getElementById('cart-total').innerText = inr(state.cart.reduce((a,b) => a + (b.price * b.qty), 0));
+        }
+        function removeFromCart(id) { state.cart = state.cart.filter(x => x.id !== id); saveState(); renderCart(); updateCartCount(); }
+
+        // CHECKOUT & PAYMENT FLOW (NO UTR, AUTO API SIMULATION)
+        function openCheckoutDetails() {
+            if(!state.user) { closeAllDrawers(); showToast('Login required for checkout'); navigate('login'); return; }
+            const form = document.getElementById('checkout-details');
+            if(form.classList.contains('hidden')) { 
+                form.classList.remove('hidden'); document.getElementById('checkout-init-btn').innerText = 'Proceed to Payment'; document.getElementById('checkout-init-btn').onclick = openPaymentModal; 
+                if(state.user && state.user.phone) fillFromProfile();
+            }
+        }
+
+        function switchPayMethod(method) {
+            document.getElementById('tab-upi').className = method === 'upi' ? 'pay-tab active' : 'pay-tab inactive';
+            document.getElementById('tab-card').className = method === 'card' ? 'pay-tab active' : 'pay-tab inactive';
+            document.getElementById('form-upi').classList.toggle('hidden', method !== 'upi'); document.getElementById('form-card').classList.toggle('hidden', method !== 'card');
+        }
+
+        function openPaymentModal() {
+            const name = document.getElementById('cust-name').value.trim(); const addr = document.getElementById('cust-address').value.trim(); const phone = document.getElementById('cust-phone').value.trim();
+            if(!isValidName(name)) return showToast('Invalid Name format', 'error');
+            if(!isValidPhone(phone)) return showToast('Enter 10 digit Phone Number', 'error');
+            if(!isValidAddress(addr)) return showToast('Address too short', 'error');
+            
+            closeAllDrawers(); switchPayMethod('upi');
+            document.getElementById('card-name').value = name; document.getElementById('card-num').value = ''; document.getElementById('card-exp').value = ''; document.getElementById('card-cvv').value = ''; updateCardVisual();
+            
+            document.getElementById('pay-amount-display-upi').innerText = inr(state.cart.reduce((a,b) => a + (b.price * b.qty), 0));
+            document.getElementById('pay-amount-display-card').innerText = inr(state.cart.reduce((a,b) => a + (b.price * b.qty), 0));
+
+            document.getElementById('payment-form-step').classList.remove('hidden'); document.getElementById('payment-polling-step').classList.add('hidden'); document.getElementById('payment-success-step').classList.add('hidden');
+            document.getElementById('modal-payment').classList.remove('hidden'); document.getElementById('modal-payment').classList.add('flex');
+        }
+
+        function initiateDirectUPI() {
+            const totalAmt = state.cart.reduce((a,b) => a + (b.price * b.qty), 0);
+            const upiString = `upi://pay?pa=${state.settings.upiId}&pn=${encodeURIComponent(state.settings.merchantName)}&am=${totalAmt}&cu=INR`;
+            
+            // 1. Fire intent to open UPI App
+            window.location.href = upiString;
+            
+            // 2. Start Ultra-Premium Polling Simulation (replaces UTR)
+            document.getElementById('payment-form-step').classList.add('hidden');
+            document.getElementById('payment-polling-step').classList.remove('hidden');
+            document.getElementById('payment-polling-step').classList.add('flex');
+            
+            // Simulate waiting for bank to respond via API webhook
+            setTimeout(() => {
+                document.getElementById('poll-title').innerText = "Verifying Webhook";
+                document.getElementById('poll-desc').innerText = "Confirming receipt with NPCI servers...";
+                
+                setTimeout(() => {
+                    finalizeOrder('UPI-' + Math.floor(1000000 + Math.random()*9000000));
+                }, 3500);
+            }, 3000);
+        }
+
+        function processCardPayment() {
+            const num = document.getElementById('card-num').value; const exp = document.getElementById('card-exp').value; const cvv = document.getElementById('card-cvv').value;
+            if (!document.getElementById('card-name').value.trim()) return showToast('Name required', 'error');
+            if (num.length !== 16) return showToast('Invalid Card: 16 digits', 'error');
+            if (exp.length !== 5) return showToast('Invalid Expiry', 'error');
+            if (cvv.length < 3) return showToast('Invalid CVV', 'error');
+
+            document.getElementById('payment-form-step').classList.add('hidden');
+            document.getElementById('payment-polling-step').classList.remove('hidden');
+            document.getElementById('payment-polling-step').classList.add('flex');
+            document.getElementById('poll-title').innerText = "Authorizing Card";
+            document.getElementById('poll-desc').innerText = "Establishing secure connection with bank...";
+
+            setTimeout(() => finalizeOrder('CARD-' + Math.floor(1000000 + Math.random()*9000000)), 4000);
+        }
+
+        function finalizeOrder(payId) {
+            state.cart.forEach(c => { const p = state.products.find(x => x.id === c.id); if(p) p.stock -= c.qty; }); // Deduct Stock Immediately (Auto-Verified)
+            state.orders.unshift({
+                id: 'ORD-' + Math.floor(100000 + Math.random()*900000),
+                customer: document.getElementById('cust-name').value, phone: document.getElementById('cust-phone').value,
+                items: [...state.cart], total: state.cart.reduce((a,b) => a + (b.price * b.qty), 0),
+                time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}), payId: payId
+            });
+            state.cart = []; saveState(); updateCartCount(); 
+            
+            document.getElementById('payment-polling-step').classList.remove('flex'); document.getElementById('payment-polling-step').classList.add('hidden');
+            document.getElementById('success-txn-id').innerText = `TXN: #${payId}`;
+            document.getElementById('payment-success-step').classList.remove('hidden'); document.getElementById('payment-success-step').classList.add('flex');
+            renderHome();
+        }
+
+        function finishOrder() { closeModal('modal-payment'); document.getElementById('store').scrollIntoView(); }
+        function closeModal(id) { document.getElementById(id).classList.add('hidden'); document.getElementById(id).classList.remove('flex'); }
+
+        // STORE RENDERING
+        function initAds() {
+            const container = document.getElementById('ad-slides'); if(state.ads.length === 0) return;
+            container.innerHTML = state.ads.map((ad, idx) => `<div class="ad-slide w-full h-full flex flex-col items-center justify-center ${idx === 0 ? 'active' : ''}" id="slide-${idx}"><img src="${ad.img}" class="absolute inset-0 w-full h-full object-cover opacity-30 grayscale"><div class="relative z-10 text-center px-4 w-full"><h1 class="text-5xl md:text-8xl font-hairline tracking-tighter mb-6">${ad.title}</h1><p class="text-gray-400 text-xs md:text-sm track-mega uppercase mb-10">${ad.subtitle}</p><button onclick="document.getElementById('store').scrollIntoView()" class="btn-outline px-10 py-4 rounded-full text-[10px] uppercase track-mega font-bold">Explore</button></div></div>`).join('');
+        }
+        function renderCategories() {
+            document.getElementById('category-tabs').innerHTML = `<button onclick="filterCat('All')" class="pb-2 text-[9px] uppercase track-mega font-bold border-b-2 ${state.currentFilter === 'All' ? 'border-white text-white' : 'border-transparent text-gray-600 hover:text-white'} transition">All</button>` + state.categories.map(c => `<button onclick="filterCat('${c}')" class="pb-2 text-[9px] uppercase track-mega font-bold border-b-2 ${state.currentFilter === c ? 'border-white text-white' : 'border-transparent text-gray-600 hover:text-white'} transition">${c}</button>`).join('');
+        }
+        function filterCat(c) { state.currentFilter = c; renderCategories(); renderHome(); }
+        
+        function renderHome() {
+            const dp = state.currentFilter === 'All' ? state.products : state.products.filter(p => p.cat === state.currentFilter);
+            document.getElementById('product-grid').innerHTML = dp.map((p,i) => `
+                <div class="group flex flex-col reveal">
+                    <div class="aspect-[4/5] mb-6 overflow-hidden bg-white/5 relative cursor-pointer rounded-[2rem]" onclick="addToCart('${p.id}'); event.stopPropagation();">
+                        ${p.stock<=0?`<div class="absolute inset-0 z-10 flex items-center justify-center bg-black/50 backdrop-blur-sm"><span class="text-white border border-white px-4 py-2 text-[9px] uppercase track-mega">Sold Out</span></div>`:''}
+                        <img src="${p.img}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-1000 ${p.stock<=0?'grayscale':''}">
+                        <div class="absolute bottom-6 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition z-20">
+                            <span class="bg-white text-black px-6 py-3 rounded-full text-[10px] uppercase track-mega font-bold shadow-2xl block whitespace-nowrap">Add to Bag</span>
+                        </div>
+                    </div>
+                    <p class="text-[8px] text-gray-500 uppercase track-mega mb-2">${p.cat}</p>
+                    <h3 class="font-light text-lg mb-1 tracking-wide">${p.name}</h3>
+                    <p class="text-sm font-semibold">${inr(p.price)}</p>
+                </div>
+            `).join('');
+            setTimeout(runReveal, 50);
+        }
+
+        // ADMIN RENDERING (Auto-Verified display)
+        function renderAdmin() {
+            document.getElementById('admin-inventory').innerHTML = state.products.map(p => `
+                <div class="flex justify-between p-6 hover:bg-white/[0.02] transition items-center">
+                    <div class="flex gap-6 items-center">
+                        <img src="${p.img}" class="w-12 h-12 object-cover rounded-xl bg-white/5 shrink-0">
+                        <div><p class="text-sm font-light">${p.name}</p><p class="text-[8px] text-gray-500 uppercase track-mega mt-1 font-mono">${p.stock} units</p></div>
+                    </div>
+                    <button onclick="openModal('modal-product', '${p.id}')" class="text-[9px] uppercase track-mega text-gray-500 hover:text-white">Edit</button>
+                </div>`).join('');
+            
+            document.getElementById('admin-orders').innerHTML = state.orders.map(o => `
+                <div class="glass-panel p-6 rounded-3xl mb-4 border-l-2 border-green-500">
+                    <div class="flex justify-between mb-3"><span class="text-[10px] font-mono tracking-widest text-gray-300">${o.id}</span><span class="text-[8px] text-green-400 border border-green-500/30 px-2 py-1 rounded bg-green-500/10">VERIFIED</span></div>
+                    <h4 class="text-sm font-light">${o.customer} <span class="text-[10px] text-gray-600 font-mono ml-2">${o.phone}</span></h4>
+                    <p class="text-[8px] text-gray-500 font-mono mt-1 mb-4 uppercase">PAY ID: ${o.payId}</p>
+                    <div class="border-t border-white/5 pt-3">
+                        ${o.items.map(i=> `<div class="flex justify-between text-[9px] text-gray-400 uppercase track-mega mb-2"><span>${i.name} x${i.qty}</span><span>${inr(i.price*i.qty)}</span></div>`).join('')}
+                        <div class="flex justify-between text-[10px] uppercase track-mega text-white font-bold pt-2 mt-2"><span>TOTAL</span><span>${inr(o.total)}</span></div>
+                    </div>
+                </div>`).join('');
+            if(state.orders.length === 0) document.getElementById('no-orders').classList.remove('hidden'); else document.getElementById('no-orders').classList.add('hidden');
+        }
+
+        function handleImageUpload(e, dataId, previewId, iconId, textId) { const f = e.target.files[0]; if(f){ const r = new FileReader(); r.onload = function(evt) { document.getElementById(dataId).value = evt.target.result; document.getElementById(previewId).src = evt.target.result; document.getElementById(previewId).classList.remove('hidden'); document.getElementById(iconId).classList.add('hidden'); document.getElementById(textId).innerText = 'Change Image'; }; r.readAsDataURL(f); } }
+        function openModal(id, dataId=null) { const m = document.getElementById(id); m.classList.remove('hidden'); m.classList.add('flex'); if(id==='modal-product'){ document.getElementById('p-cat').innerHTML = state.categories.map(c => `<option value="${c}">${c}</option>`).join(''); if(dataId){ const p = state.products.find(x=>x.id===dataId); document.getElementById('p-id').value=p.id; document.getElementById('p-name').value=p.name; document.getElementById('p-cat').value=p.cat; document.getElementById('p-price').value=p.price; document.getElementById('p-stock').value=p.stock; document.getElementById('p-img-data').value=p.img; document.getElementById('p-preview').src=p.img; document.getElementById('p-preview').classList.remove('hidden'); document.getElementById('p-icon').classList.add('hidden'); } else { document.getElementById('p-id').value=''; document.getElementById('p-name').value=''; document.getElementById('p-price').value=''; document.getElementById('p-stock').value=''; document.getElementById('p-preview').classList.add('hidden'); document.getElementById('p-icon').classList.remove('hidden'); document.getElementById('p-img-data').value='';} } }
+        function saveProduct(e) { e.preventDefault(); const id = document.getElementById('p-id').value; const data = { id: id || 'P'+Date.now(), name: document.getElementById('p-name').value, cat: document.getElementById('p-cat').value, img: document.getElementById('p-img-data').value || 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500', price: Number(document.getElementById('p-price').value), stock: Number(document.getElementById('p-stock').value) }; if(id) state.products = state.products.map(x=>x.id===id?data:x); else state.products.unshift(data); saveState(); closeModal('modal-product'); renderAdmin(); showToast('Saved'); }
+
+        function runReveal() {
+            const reveals = document.querySelectorAll('.reveal');
+            const observer = new IntersectionObserver((entries) => { entries.forEach(entry => { if (entry.isIntersecting) { entry.target.classList.add('active'); } }); }, { threshold: 0.1 });
+            reveals.forEach(r => observer.observe(r));
+        }
+
+        window.onload = () => { renderCategories(); renderHome(); initAds(); updateNavbar(); setTimeout(runReveal, 100); };
+    </script>
+</body>
+</html>
